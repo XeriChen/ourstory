@@ -63,11 +63,15 @@ const {
   <body>
     <slot />
     <script>
-      if (!window.__ourStoryTransitionImagesReady) {
-        window.__ourStoryTransitionImagesReady = true;
+      type ReadyWindow = typeof window & { __ourStoryTransitionImagesReady?: boolean };
 
-        const preloadImage = (src, signal) =>
-          new Promise((resolve) => {
+      const readyWindow = window as ReadyWindow;
+
+      if (!readyWindow.__ourStoryTransitionImagesReady) {
+        readyWindow.__ourStoryTransitionImagesReady = true;
+
+        const preloadImage = (src: string | null, signal?: AbortSignal) =>
+          new Promise<void>((resolve) => {
             if (!src || signal?.aborted) {
               resolve();
               return;
@@ -88,7 +92,11 @@ const {
             image.src = src;
           });
 
-        const warmNextPageImages = async (event) => {
+        const warmNextPageImages = async (event: {
+          newDocument?: Document;
+          to?: URL;
+          signal?: AbortSignal;
+        }) => {
           const nextDocument = event.newDocument;
           const nextUrl = event.to;
 
@@ -102,7 +110,7 @@ const {
             ),
           )
             .map((image) => image.getAttribute("src"))
-            .filter(Boolean)
+            .filter((src): src is string => Boolean(src))
             .slice(0, 8)
             .map((src) => new URL(src, nextUrl).href);
 
@@ -112,22 +120,22 @@ const {
 
           await Promise.race([
             Promise.allSettled(images.map((src) => preloadImage(src, event.signal))),
-            new Promise((resolve) => setTimeout(resolve, 850)),
+            new Promise<void>((resolve) => setTimeout(resolve, 850)),
           ]);
         };
 
         document.addEventListener("astro:before-preparation", (event) => {
-          const originalLoader = event.loader;
+          const originalLoader = (event as { loader?: unknown }).loader;
 
           if (typeof originalLoader !== "function") {
             return;
           }
 
-          event.loader = async () => {
+          (event as { loader: (...args: unknown[]) => Promise<unknown> }).loader = async () => {
             await originalLoader();
 
             if (!event.defaultPrevented && !event.signal?.aborted) {
-              await warmNextPageImages(event);
+              await warmNextPageImages(event as Parameters<typeof warmNextPageImages>[0]);
             }
           };
         });

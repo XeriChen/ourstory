@@ -1269,7 +1269,12 @@ h3 span,
     rgba(36, 31, 27, 0);
   backdrop-filter: blur(0px);
   opacity: 0;
-  transition: opacity 260ms ease, background 260ms ease, backdrop-filter 260ms ease;
+  pointer-events: none;
+  transition:
+    opacity 260ms ease,
+    background 260ms ease,
+    backdrop-filter 260ms ease,
+    pointer-events 0s linear 260ms;
 }
 
 .lightbox.open {
@@ -1278,6 +1283,8 @@ h3 span,
     radial-gradient(circle at 18% 14%, rgba(255, 252, 246, 0.82), transparent 26%),
     rgba(36, 31, 27, 0.58);
   backdrop-filter: blur(5px);
+  pointer-events: auto;
+  transition-delay: 0s;
 }
 
 /* 未打开时真正隐藏：否则 display:grid 会覆盖 [hidden]，

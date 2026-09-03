@@ -20,37 +20,36 @@ const { photos } = Astro.props;
         <button
           class="photo-open"
           type="button"
-          aria-label={`放大查看：${photo.title}`}
+          aria-label={`放大查看：${photo.title || photo.date}`}
           data-photo-open
           data-photo-src={photo.image}
           data-photo-alt={photo.alt}
           data-photo-date={photo.date}
-          data-photo-title={photo.title}
+          data-photo-title={photo.title || photo.date}
         >
           <img src={photo.image} alt={photo.alt} decoding="async" loading={index < 6 ? "eager" : "lazy"} />
         </button>
       </figure>
       <div>
         <time>{photo.date}</time>
-        <h2>{photo.title}</h2>
+        {photo.title && <h2>{photo.title}</h2>}
       </div>
     </article>
   ))}
 </section>
 
-<div class="photo-lightbox" data-photo-lightbox hidden>
-  <button class="photo-lightbox-close" type="button" data-photo-close aria-label="关闭照片预览">
-    &times;
-  </button>
-  <figure class="photo-lightbox-frame">
-    <img data-photo-lightbox-image src="" alt="" />
-    <figcaption>
-      <time data-photo-lightbox-date></time>
-      <span data-photo-lightbox-title></span>
-    </figcaption>
-  </figure>
-</div>
-
+  <div class="photo-lightbox" data-photo-lightbox hidden role="dialog" aria-modal="true" aria-label="照片预览" aria-hidden="true">
+    <button class="photo-lightbox-close" type="button" data-photo-close aria-label="关闭照片预览">
+      &times;
+    </button>
+    <figure class="photo-lightbox-frame">
+      <img data-photo-lightbox-image src="" alt="" />
+      <figcaption>
+        <time data-photo-lightbox-date></time>
+        <span data-photo-lightbox-title></span>
+      </figcaption>
+    </figure>
+  </div>
 <script>
   function initPhotoLightbox() {
     const lightbox = document.querySelector("[data-photo-lightbox]");
@@ -65,9 +64,11 @@ const { photos } = Astro.props;
     const openButtons = document.querySelectorAll("[data-photo-open]");
 
     let savedScrollY = 0;
+    let lastTrigger: HTMLElement | null = null;
 
     const closeLightbox = () => {
       lightbox.hidden = true;
+      lightbox.setAttribute("aria-hidden", "true");
       document.documentElement.classList.remove("has-photo-lightbox");
       // 解除 body 固定并恢复滚动位置（见 CSS 中的 has-photo-lightbox 规则）。
       // 临时关掉 scroll-behavior:smooth，否则会从顶部平滑滚动、定位不准。
@@ -77,6 +78,7 @@ const { photos } = Astro.props;
       html.style.scrollBehavior = "auto";
       window.scrollTo(0, savedScrollY);
       html.style.scrollBehavior = prevBehavior;
+      lastTrigger instanceof HTMLElement && lastTrigger.focus();
     };
 
     openButtons.forEach((button) => {
@@ -95,8 +97,10 @@ const { photos } = Astro.props;
         lightboxDate.textContent = button.dataset.photoDate ?? "";
         lightboxTitle.textContent = button.dataset.photoTitle ?? "";
         lightbox.hidden = false;
+        lightbox.setAttribute("aria-hidden", "false");
         // 固定 body 防止移动端触摸滚动穿透（记录并锁定当前滚动位置）
         savedScrollY = window.scrollY;
+        lastTrigger = button;
         document.body.style.top = `-${savedScrollY}px`;
         document.documentElement.classList.add("has-photo-lightbox");
         closeButton instanceof HTMLElement && closeButton.focus();
@@ -110,6 +114,9 @@ const { photos } = Astro.props;
         closeLightbox();
       }
     });
+
+    // 门面事件：让全局 Esc 监听复用同一套关闭逻辑（含焦点还原）
+    lightbox.addEventListener("photolightbox:close", closeLightbox);
   }
 
   // Esc 关闭：只在 document 上绑定一次，动态查当前遮罩，避免多次导航后监听泄漏
@@ -119,16 +126,7 @@ const { photos } = Astro.props;
       if (event.key !== "Escape") return;
       const lb = document.querySelector("[data-photo-lightbox]");
       if (lb instanceof HTMLElement && !lb.hidden) {
-        lb.hidden = true;
-        document.documentElement.classList.remove("has-photo-lightbox");
-        // 与 closeLightbox 一致：解除 body 固定并恢复滚动位置
-        const y = Math.abs(parseInt(document.body.style.top || "0", 10)) || 0;
-        document.body.style.top = "";
-        const html = document.documentElement;
-        const prevBehavior = html.style.scrollBehavior;
-        html.style.scrollBehavior = "auto";
-        window.scrollTo(0, y);
-        html.style.scrollBehavior = prevBehavior;
+        lb.dispatchEvent(new Event("photolightbox:close"));
       }
     });
   }

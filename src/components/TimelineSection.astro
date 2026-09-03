@@ -47,7 +47,7 @@ const STACK_LIMIT = 3;
         data-title={title}
         role="button"
         tabindex="0"
-        aria-label={`查看「${title}」的 ${images.length} 张照片`}
+        aria-label={`查看「${title || date}」的 ${images.length} 张照片`}
       >
         {stackImgs.map((src, i) => (
           <figure
@@ -72,7 +72,7 @@ const STACK_LIMIT = 3;
         data-title={title}
         role="button"
         tabindex="0"
-        aria-label={`查看「${title}」的照片`}
+        aria-label={`查看「${title || date}」的照片`}
       >
         <span class={`tape tape-corner-${tapeSide}`}></span>
         <span class="thumb-spinner" aria-hidden="true"></span>
@@ -207,7 +207,10 @@ const STACK_LIMIT = 3;
       const done = () => {
         lb.hidden = true;
         lb.removeEventListener("transitionend", done);
+        clearTimeout(failsafe);
       };
+      // prefers-reduced-motion 下 transition:none 不会触发 transitionend，定时器兜底
+      const failsafe = setTimeout(done, 300);
       lb.addEventListener("transitionend", done);
       lastTrigger?.focus();
     };
