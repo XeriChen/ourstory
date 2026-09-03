@@ -3,7 +3,8 @@ const dayMs = 24 * 60 * 60 * 1000;
 export const siteConfig = {
   copyright: "© 2026 zhlyxh.com All rights reserved.",
   heroMedia: {
-    image: "/assets/photos/2026_06_17_17_49_59_IMG_9752.JPG",
+    image: "/assets/photos/2026_06_17_17_49_59_IMG_9752.webp",
+    imageAlt: "2026.6.17 的合照",
     caption: "2026.6.17"
   },
   relationship: {
